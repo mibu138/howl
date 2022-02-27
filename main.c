@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #define HELL_SIMPLE_NAMES
+#define HELL_SIMPLE_FUNCTION_NAMES
 #include <hell/hell.h>
 #include <math.h>
 
@@ -41,7 +42,7 @@ callback(const void* inbuf, void* outbuf, unsigned long framecount,
     WaveData* wd  = userdata;
     SinWave*  sw  = &wd->sinwaves[0];
     float*    out = outbuf;
-    float t = wd->t;
+    float     t   = wd->t;
 
     for (int i = 0; i < framecount; i++)
     {
@@ -68,27 +69,51 @@ makewave1(void)
 Hellmouth hm;
 PaStream* stream;
 
-void shutdown(void)
+void
+shutdown(void)
 {
-    PaError   err;
+    PaError err;
     err = Pa_StopStream(stream);
     CE(err);
     err = Pa_CloseStream(stream);
     CE(err);
-    Pa_Terminate();
+    err = Pa_Terminate();
+    CE(err);
+    hell_CloseAndExit(&hm);
 }
 
-void frame(i64 fi, i64 dt)
+WaveData wd;
+
+void
+frame(i64 fi, i64 dt)
 {
-    if (fi > 740)
-        hell_CloseAndExit(&hm);
+    int          evc;
+    const Event* events = hell_GetEvents(&hm, &evc);
+    for (int i = 0; i < evc; i++)
+    {
+        const Event* ev = &events[i];
+        if (ev->type == HELL_EVENT_TYPE_KEYDOWN)
+        {
+            switch (hell_GetEventKeyCode(ev))
+            {
+            case HELL_KEY_A:
+                wd.sinwaves[0].freq *= 1.001;
+                break;
+            case HELL_KEY_S:
+                wd.sinwaves[0].freq *= 0.999;
+                break;
+            case HELL_KEY_Q:
+                shutdown();
+            }
+        }
+    }
 }
 
 int
 main(int argc, char* argv[])
 {
-    WaveData  wd = makewave1();
-    PaError   err;
+    wd = makewave1();
+    PaError err;
 
     printf("Sup foo\n");
     err = Pa_Initialize();
@@ -99,6 +124,7 @@ main(int argc, char* argv[])
     err = Pa_StartStream(stream);
 
     OpenHellmouth_NoConsole(frame, shutdown, &hm);
+    hell_HellmouthAddWindow(&hm, 500, 500, NULL);
 
     Loop(&hm);
     return 0;
