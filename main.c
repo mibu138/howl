@@ -6,6 +6,7 @@
 #include <hell/hell.h>
 #include <hell/minmax.h>
 #include <math.h>
+#include <unistd.h>
 
 #define CE(err)                                                                \
     if (err)                                                                   \
@@ -90,6 +91,11 @@ frame(i64 fi, i64 dt)
 {
     int          evc;
     const Event* events = hell_GetEvents(&hm, &evc);
+    if (fi == 0)
+        wd.sinwaves[0].amp = 0.0;
+    // slow ramp up to volume..
+    if (fi < 200)
+        wd.sinwaves[0].amp += 0.0001;
     for (int i = 0; i < evc; i++)
     {
         const Event* ev = &events[i];
@@ -122,13 +128,15 @@ main(int argc, char* argv[])
 {
     wd = makewave1();
     PaError err;
-    wd.sinwaves[0].amp = 0.0;
 
     printf("Sup foo\n");
     err = Pa_Initialize();
     CE(err);
     err = Pa_OpenDefaultStream(&stream, 0, 1, paFloat32, SAMPLE_RATE, 256,
                                callback, &wd);
+    
+    // give it a second to get situated...
+    hell_Sleep(1.0);
     CE(err);
     err = Pa_StartStream(stream);
 
