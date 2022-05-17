@@ -4,6 +4,7 @@
 #define HELL_SIMPLE_NAMES
 #define HELL_SIMPLE_FUNCTION_NAMES
 #include <hell/hell.h>
+#include <hell/minmax.h>
 #include <math.h>
 
 #define CE(err)                                                                \
@@ -94,13 +95,20 @@ frame(i64 fi, i64 dt)
         const Event* ev = &events[i];
         if (ev->type == HELL_EVENT_TYPE_KEYDOWN)
         {
+            float amp = wd.sinwaves[0].amp;
             switch (hell_GetEventKeyCode(ev))
             {
             case HELL_KEY_A:
-                wd.sinwaves[0].freq *= 1.001;
+                wd.sinwaves[0].freq -= 20.0;
                 break;
             case HELL_KEY_S:
-                wd.sinwaves[0].freq *= 0.999;
+                wd.sinwaves[0].freq += 20.0;
+                break;
+            case HELL_KEY_J:
+                wd.sinwaves[0].amp = fmax(amp - 0.01, 0.0);
+                break;
+            case HELL_KEY_K:
+                wd.sinwaves[0].amp = fmin(amp + 0.01, 1.0);
                 break;
             case HELL_KEY_Q:
                 shutdown();
@@ -114,6 +122,7 @@ main(int argc, char* argv[])
 {
     wd = makewave1();
     PaError err;
+    wd.sinwaves[0].amp = 0.0;
 
     printf("Sup foo\n");
     err = Pa_Initialize();
@@ -123,7 +132,7 @@ main(int argc, char* argv[])
     CE(err);
     err = Pa_StartStream(stream);
 
-    OpenHellmouth_NoConsole(frame, shutdown, &hm);
+    OpenHellmouthNoConsole(frame, shutdown, &hm);
     hell_HellmouthAddWindow(&hm, 500, 500, NULL);
 
     Loop(&hm);
